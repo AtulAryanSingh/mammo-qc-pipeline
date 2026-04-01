@@ -1,0 +1,11 @@
+# Project Mammo: Automated QC Pipeline Configuration
+
+paths:
+  data_folder: "mammo"
+
+model:
+  n_components: 3
+  random_state: 42
+
+business_rules:
+  safety_threshold: 75.0
