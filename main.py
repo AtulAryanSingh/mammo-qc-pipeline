@@ -125,25 +125,8 @@ def main():
             plt.scatter(X[i, 0], X[i, 1], color='red', edgecolor='darkred', s=90, zorder=5)
             flagged_count += 1
 
-    # 5. Export the Data to a CSV Report
-    report_path = "QC_Triage_Report.csv"
-    with open(report_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Category", "File Name", "AI Confidence Score"])
-        
-        for category, items in triage_bins.items():
-            for name, score in items:
-                writer.writerow([category, name, f"{score:.1f}%"])
-
-    print(f"✅ Triage complete. Full breakdown saved to: {report_path}")
-    print(f"Total Scans Flagged for Review: {flagged_count} out of {len(names)}\n")
-    
-    # Print a quick executive summary to the terminal
-    for category, items in triage_bins.items():
-         print(f"{category}: {len(items)} scans")
-
-    # 6. Render the Executive Chart
-    plt.title(f'Project Mammo QC\nSilhouette score: {sil_score:.3f} (closer to 1 = well-separated)', fontsize=14, fontweight='bold', pad=15)
+   # 5. Render the Executive Scatter Plot (Cleaned up!)
+    plt.title('Project Mammo QC: Probabilistic Clustering\n(Red = AI requires human review)', fontsize=14, fontweight='bold', pad=15)
     plt.xlabel('Feature 1: Average Tissue Density', fontsize=12)
     plt.ylabel('Feature 2: Image Contrast', fontsize=12)
 
@@ -152,7 +135,50 @@ def main():
     plt.legend(handles=[red_patch, standard_patch], loc='best')
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.show()
+    plt.show() # The script pauses here until you close the scatter plot
+
+    # ==========================================
+    # 6. NEW: THE RADIOLOGIST REVIEW GRID
+    # ==========================================
+    print("\n--- Generating Visual Grid for Critical Scans ---")
+    
+    # Grab all flagged images and sort them to find the absolute worst ones
+    flagged_list = []
+    for i in range(len(names)):
+        max_conf = np.max(probabilities[i]) * 100
+        if max_conf < SAFETY_THRESHOLD:
+            flagged_list.append((names[i], max_conf))
+
+    # Sort so the lowest confidence scores are at the very beginning
+    flagged_list.sort(key=lambda x: x[1])
+    worst_scans = flagged_list[:9] # Grab the top 9 worst offenders
+
+    # Only draw the grid if we actually caught anomalies
+    if len(worst_scans) > 0:
+        fig, axes = plt.subplots(3, 3, figsize=(10, 10))
+        fig.suptitle('MedSendX Critical Anomalies (Lowest AI Confidence)', fontsize=16, fontweight='bold')
+
+        # Flatten the 3x3 axis array so we can loop through it easily
+        axes = axes.flatten()
+
+        for idx, ax in enumerate(axes):
+            if idx < len(worst_scans):
+                file_name, conf = worst_scans[idx]
+                img_path = Path(DATA_FOLDER) / file_name
+                
+                try:
+                    # Open the original image and display it
+                    img = Image.open(img_path)
+                    ax.imshow(img, cmap='gray') # Medical images look best in pure grayscale
+                    ax.set_title(f"{file_name}\nAI Confidence: {conf:.1f}%", color='darkred', fontweight='bold', fontsize=10)
+                except Exception as e:
+                    ax.set_title("Image Load Error")
+            
+            # Turn off the graph borders and numbers for a clean photo-grid look
+            ax.axis('off')
+
+        plt.tight_layout()
+        plt.show()
 
 if __name__ == "__main__":
     main()
