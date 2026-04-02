@@ -7,6 +7,7 @@ from sklearn.mixture import GaussianMixture
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import csv
+from sklearn.metrics import silhouette_score
 
 def load_configuration():
     """Loads the YAML configuration file."""
