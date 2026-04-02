@@ -125,60 +125,56 @@ def main():
             plt.scatter(X[i, 0], X[i, 1], color='red', edgecolor='darkred', s=90, zorder=5)
             flagged_count += 1
 
-   # 5. Render the Executive Scatter Plot (Cleaned up!)
-    plt.title('Project Mammo QC: Probabilistic Clustering\n(Red = AI requires human review)', fontsize=14, fontweight='bold', pad=15)
+# ==========================================
+    # 5. Render the Executive Dashboard Plot
+    # ==========================================
+    plt.figure(figsize=(13, 8)) # Made it slightly wider to fit the report box
+    
+    # We will plot the dots layer by layer based on their Triage category
+    # Extract the X and Y coordinates for each category from our triage_bins
+    
+    exc_x = [X[names.index(name), 0] for name, _ in triage_bins.get("Excellent (90-100%)", [])]
+    exc_y = [X[names.index(name), 1] for name, _ in triage_bins.get("Excellent (90-100%)", [])]
+    
+    good_x = [X[names.index(name), 0] for name, _ in triage_bins.get("Good (75-89%)", [])]
+    good_y = [X[names.index(name), 1] for name, _ in triage_bins.get("Good (75-89%)", [])]
+    
+    bord_x = [X[names.index(name), 0] for name, _ in triage_bins.get("Borderline (50-74%)", [])]
+    bord_y = [X[names.index(name), 1] for name, _ in triage_bins.get("Borderline (50-74%)", [])]
+    
+    crit_x = [X[names.index(name), 0] for name, _ in triage_bins.get("Critical (<50%)", [])]
+    crit_y = [X[names.index(name), 1] for name, _ in triage_bins.get("Critical (<50%)", [])]
+
+    # Plot each category with its own distinct color and label
+    if exc_x: plt.scatter(exc_x, exc_y, color='#2ca02c', label='Excellent (90-100%)', alpha=0.6, s=60)
+    if good_x: plt.scatter(good_x, good_y, color='#1f77b4', label='Good (75-89%)', alpha=0.6, s=60)
+    if bord_x: plt.scatter(bord_x, bord_y, color='#ff7f0e', label='Borderline (50-74%)', alpha=0.9, s=70)
+    if crit_x: plt.scatter(crit_x, crit_y, color='#d62728', edgecolor='darkred', label='Critical (<50%)', s=100, zorder=5)
+
+    plt.title('Project Mammo QC: Automated Triage Dashboard', fontsize=16, fontweight='bold', pad=15)
     plt.xlabel('Feature 1: Average Tissue Density', fontsize=12)
     plt.ylabel('Feature 2: Image Contrast', fontsize=12)
 
-    red_patch = mpatches.Patch(color='red', label=f'Flagged Anomalies (<{SAFETY_THRESHOLD}%)')
-    standard_patch = mpatches.Patch(color='gray', label='Verified Scans')
-    plt.legend(handles=[red_patch, standard_patch], loc='best')
+    # Add the Legend
+    plt.legend(loc='upper left', fontsize=11, framealpha=0.9)
+
+    # Inject the Live Text Report directly onto the chart
+    report_text = (
+        "📊 QA Triage Report\n"
+        "------------------------\n"
+        f"Excellent Scans: {len(exc_x)}\n"
+        f"Good Scans:       {len(good_x)}\n"
+        f"Borderline:       {len(bord_x)}\n"
+        f"Critical:          {len(crit_x)}\n"
+        "------------------------\n"
+        f"Total Processed:  {len(names)}"
+    )
+    
+    # Place the text box in the top right corner
+    props = dict(boxstyle='round,pad=0.8', facecolor='white', alpha=0.95, edgecolor='gray')
+    plt.text(0.97, 0.96, report_text, transform=plt.gca().transAxes, fontsize=11,
+             verticalalignment='top', horizontalalignment='right', bbox=props, family='monospace')
+
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.show() # The script pauses here until you close the scatter plot
-
-    # ==========================================
-    # 6. NEW: THE RADIOLOGIST REVIEW GRID
-    # ==========================================
-    print("\n--- Generating Visual Grid for Critical Scans ---")
-    
-    # Grab all flagged images and sort them to find the absolute worst ones
-    flagged_list = []
-    for i in range(len(names)):
-        max_conf = np.max(probabilities[i]) * 100
-        if max_conf < SAFETY_THRESHOLD:
-            flagged_list.append((names[i], max_conf))
-
-    # Sort so the lowest confidence scores are at the very beginning
-    flagged_list.sort(key=lambda x: x[1])
-    worst_scans = flagged_list[:9] # Grab the top 9 worst offenders
-
-    # Only draw the grid if we actually caught anomalies
-    if len(worst_scans) > 0:
-        fig, axes = plt.subplots(3, 3, figsize=(10, 10))
-        fig.suptitle('MedSendX Critical Anomalies (Lowest AI Confidence)', fontsize=16, fontweight='bold')
-
-        # Flatten the 3x3 axis array so we can loop through it easily
-        axes = axes.flatten()
-
-        for idx, ax in enumerate(axes):
-            if idx < len(worst_scans):
-                file_name, conf = worst_scans[idx]
-                img_path = Path(DATA_FOLDER) / file_name
-                
-                try:
-                    # Open the original image and display it
-                    img = Image.open(img_path)
-                    ax.imshow(img, cmap='gray') # Medical images look best in pure grayscale
-                    ax.set_title(f"{file_name}\nAI Confidence: {conf:.1f}%", color='darkred', fontweight='bold', fontsize=10)
-                except Exception as e:
-                    ax.set_title("Image Load Error")
-            
-            # Turn off the graph borders and numbers for a clean photo-grid look
-            ax.axis('off')
-
-        plt.tight_layout()
-        plt.show()
-
-if __name__ == "__main__":
-    main()
+    plt.show() # Pauses here until you close the window
