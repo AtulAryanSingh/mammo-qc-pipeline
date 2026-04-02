@@ -76,6 +76,18 @@ def main():
     gmm_clusters = gmm.fit_predict(X_scaled)
     probabilities = gmm.predict_proba(X_scaled)
     print("✅ AI Training Complete.")
+    
+    print("--- Scaling Features & Training GMM AI ---")
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X) 
+
+    gmm = GaussianMixture(n_components=N_COMPONENTS, random_state=42)
+    gmm_clusters = gmm.fit_predict(X_scaled)
+    probabilities = gmm.predict_proba(X_scaled)
+    
+    # NEW CODE: Calculate the Silhouette Score
+    sil_score = silhouette_score(X_scaled, gmm_clusters)
+    print(f"✅ AI Training Complete. Silhouette Score: {sil_score:.3f}")
 
     # 4. The Triage Engine & Visualization
     print(f"\n--- Automated QC Engine & Triage ---")
@@ -130,7 +142,7 @@ def main():
          print(f"{category}: {len(items)} scans")
 
     # 6. Render the Executive Chart
-    plt.title('Project Mammo QC: Probabilistic Clustering', fontsize=16, fontweight='bold', pad=15)
+    plt.title(f'Project Mammo QC\nSilhouette score: {sil_score:.3f} (closer to 1 = well-separated)', fontsize=14, fontweight='bold', pad=15)
     plt.xlabel('Feature 1: Average Tissue Density', fontsize=12)
     plt.ylabel('Feature 2: Image Contrast', fontsize=12)
 
